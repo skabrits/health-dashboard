@@ -1,0 +1,10 @@
+services:
+  - name: "OpenVPN server"
+    type: "openvpn"
+    url: "https://openvpn-server.example.com:1194"
+  - name: "Proxy"
+    type: "proxy"
+    url: "https://my-proxy.example.com"
+  - name: "Generic Website"
+    type: "generic"
+    url: "https://www.example.com"

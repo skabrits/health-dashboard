@@ -1,0 +1,6 @@
+apiVersion: v2
+name: health-dashboard
+description: A helm chart for a simple Flask health check dashboard application
+type: application
+version: 0.1.0
+appVersion: "0.1.0"

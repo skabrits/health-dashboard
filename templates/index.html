@@ -1,0 +1,72 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Service Health Dashboard</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      margin: 2rem;
+      background: #f9f9f9;
+    }
+    h1 {
+      text-align: center;
+      margin-bottom: 2rem;
+    }
+    .services-container {
+      display: flex;
+      flex-direction: column;
+      gap: 1rem;
+      max-width: 600px;
+      margin: 0 auto;
+    }
+    .service {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 1rem;
+      background: #fff;
+      border-radius: 8px;
+      box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    }
+    .service-name {
+      font-weight: bold;
+      font-size: 1.1rem;
+    }
+    .service-status {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+    .status-indicator {
+      width: 16px;
+      height: 16px;
+      border-radius: 50%;
+      background-color: gray;
+    }
+    .status-green {
+      background-color: #4caf50; /* green */
+    }
+    .status-red {
+      background-color: #f44336; /* red */
+    }
+  </style>
+</head>
+<body>
+  <h1>Service Health Dashboard</h1>
+  <div class="services-container">
+    {% for service in services %}
+    <div class="service">
+      <div class="service-name">{{ service.name }}</div>
+      <div class="service-status">
+        {% if service.is_up %}
+        <div class="status-indicator status-green"></div> UP
+        {% else %}
+        <div class="status-indicator status-red"></div> DOWN
+        {% endif %}
+      </div>
+    </div>
+    {% endfor %}
+  </div>
+</body>
+</html>

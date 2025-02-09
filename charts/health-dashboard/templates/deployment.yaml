@@ -1,0 +1,32 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "health-dashboard.fullname" . }}
+  labels:
+    app: {{ include "health-dashboard.name" . }}
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: {{ include "health-dashboard.name" . }}
+  template:
+    metadata:
+      labels:
+        app: {{ include "health-dashboard.name" . }}
+    spec:
+      containers:
+        - name: my-flask-container
+          image: "{{ .Values.image.repository }}:{{ .Values.image.tag }}"
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          ports:
+            - containerPort: 5000
+          env:
+            - name: CONFIG_PATH
+              value: "/config/config.yaml"
+          volumeMounts:
+            - name: flask-config
+              mountPath: /config
+      volumes:
+        - name: flask-config
+          configMap:
+            name: {{ include "health-dashboard.fullname" . }}-config
