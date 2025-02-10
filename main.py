@@ -28,7 +28,9 @@ def check_openvpn(url):
 
             try:
                 # Try reading a small chunk of data (OpenVPN may respond)
+                print("go")
                 response = sock.recv(1024)
+                print(response)
                 if response:
                     return True
                 else:
