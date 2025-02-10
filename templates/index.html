@@ -32,7 +32,24 @@
     .service-name {
       font-weight: bold;
       font-size: 1.1rem;
+      max-width: 35%;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
     }
+
+    .service-reason {
+      width: 42%;
+      height: 1.6rem;
+      overflow-y: scroll;
+      overflow-x: hidden;
+      font-size: 0.7rem;
+      word-break: break-all;
+      scroll-behavior: smooth;
+      -ms-overflow-style: none;  /* Internet Explorer 10+ */
+      scrollbar-width: none;  /* Firefox */
+    }
+
     .service-status {
       display: flex;
       align-items: center;
@@ -58,6 +75,9 @@
     {% for service in services %}
     <div class="service">
       <div class="service-name">{{ service.name }}</div>
+      {% if service.reason != "" %}
+      <div class="service-reason">{{ service.reason }}</div>
+      {% endif %}
       <div class="service-status">
         {% if service.is_up %}
         <div class="status-indicator status-green"></div> UP

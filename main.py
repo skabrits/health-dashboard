@@ -23,22 +23,18 @@ def check_openvpn(url):
     """
     host, port = url.split("://")[-1].split(":")
     try:
-        with socket.create_connection((host, port), timeout=5) as sock:
-            sock.settimeout(5)  # Set timeout for receiving data
-
+        with socket.create_connection((host, port), timeout=3) as sock:
+            sock.settimeout(3)
             try:
-                # Try reading a small chunk of data (OpenVPN may respond)
-                print("go")
                 response = sock.recv(1024)
-                print(response)
                 if response:
                     return True
                 else:
                     return True
             except socket.timeout:
                 return True
-            except Exception:
-                return False
+            except Exception as e:
+                return False, str(e)
 
     except ConnectionRefusedError:
         return False
@@ -46,8 +42,11 @@ def check_openvpn(url):
         return False
     except socket.gaierror:
         return False
-    except Exception:
-        return False
+    except Exception as e:
+        e_m = str(e)
+        if "Failed to resolve" in e_m:
+            return False, "Failed to resolve host, check https://dnschecker.org/#A to see DNS propagation."
+        return False, e_m
 
 
 def check_proxy(url):
@@ -56,10 +55,13 @@ def check_proxy(url):
     """
     try:
         surl = url.split("://")
-        resp = requests.get(url, proxies={surl[0]: surl[1]}, timeout=5)
+        resp = requests.get(url, proxies={surl[0]: surl[1]}, timeout=3)
         return resp.ok or resp.status_code in [407]
-    except Exception:
-        return False
+    except Exception as e:
+        e_m = str(e)
+        if "Failed to resolve" in e_m:
+            return False, "Failed to resolve host, check https://dnschecker.org/#A to see DNS propagation."
+        return False, e_m
 
 
 def check_generic(url):
@@ -67,15 +69,18 @@ def check_generic(url):
     Generic check for any HTTP endpoint.
     """
     try:
-        resp = requests.get(url, timeout=5)
+        resp = requests.get(url, timeout=3)
         return resp.ok or resp.status_code in [401, 403]
-    except Exception:
-        return False
+    except Exception as e:
+        e_m = str(e)
+        if "Failed to resolve" in e_m:
+            return False, "Failed to resolve host, check https://dnschecker.org/#A to see DNS propagation."
+        return False, e_m
 
 
 @app.route(app.config["BASE_PATH"], methods=["GET"])
 def index():
-    services = load_services_config(os.environ.get("CONFIG_PATH", "config.yaml"))
+    services = load_services_config(os.getenv("CONFIG_PATH", "config.yaml"))
     service_statuses = []
 
     for service in services:
@@ -93,13 +98,13 @@ def index():
         service_statuses.append({
             "name": service_name,
             "type": service_type,
+            "reason": "" if isinstance(status, bool) else status[1],
             "url": service_url,
-            "is_up": status
+            "is_up": status if isinstance(status, bool) else status[0]
         })
 
     return render_template("index.html", services=service_statuses)
 
 
 if __name__ == "__main__":
-    # Run the Flask app
     app.run(host="0.0.0.0", port=5000)
