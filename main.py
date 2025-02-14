@@ -1,20 +1,52 @@
-from flask import Flask, render_template
+from flask import Flask, render_template, request
+from functools import wraps
+import concurrent.futures
+import datetime
 import requests
 import socket
 import yaml
+import time
 import os
 
 app = Flask(__name__)
 app.config["BASE_PATH"] = os.getenv("BASE_PATH", "/")
+app.config["ADMIN_MESSAGE"] = ""
+app.config["ADMIN_MESSAGE_TIME"] = time.time()
+app.config["ADMIN_MESSAGE_EXPIRATION_TIME"] = 86400
 
 
-def load_services_config(config_path="config.yaml"):
+def login_required(f):
+    @wraps(f)
+    def wrapped_view(**kwargs):
+        auth = request.authorization
+        if not (auth and check_auth(auth.username, auth.password)):
+            return ('Unauthorized', 401, {
+                'WWW-Authenticate': 'Basic realm="Login Required"'
+            })
+
+        return f(**kwargs)
+
+    return wrapped_view
+
+
+def check_auth(username, password):
+    admin_user = os.getenv("ADMIN_USER")
+    admin_password = os.getenv("ADMIN_PASSWORD")
+    return username == admin_user and password == admin_password
+
+
+def load_services_config(config_path="config.yaml", config_name="services"):
     """
     Load service definitions from a YAML config file.
     """
+    if app.config["ADMIN_MESSAGE_TIME"] != "" and abs(time.time() - app.config["ADMIN_MESSAGE_TIME"]) > app.config["ADMIN_MESSAGE_EXPIRATION_TIME"]:
+        app.config["ADMIN_MESSAGE"] = ""
+        app.config["ADMIN_MESSAGE_TIME"] = time.time()
+        app.config["ADMIN_MESSAGE_EXPIRATION_TIME"] = 86400
+
     with open(config_path, "r") as f:
         data = yaml.safe_load(f)
-    return data.get("services", [])
+    return data.get(config_name, [])
 
 
 def check_openvpn(url):
@@ -23,8 +55,8 @@ def check_openvpn(url):
     """
     host, port = url.split("://")[-1].split(":")
     try:
-        with socket.create_connection((host, port), timeout=3) as sock:
-            sock.settimeout(3)
+        with socket.create_connection((host, port), timeout=5) as sock:
+            sock.settimeout(5)
             try:
                 response = sock.recv(1024)
                 if response:
@@ -69,7 +101,7 @@ def check_generic(url):
     Generic check for any HTTP endpoint.
     """
     try:
-        resp = requests.get(url, timeout=3)
+        resp = requests.get(url, timeout=10)
         return resp.ok or resp.status_code in [401, 403]
     except Exception as e:
         e_m = str(e)
@@ -78,32 +110,61 @@ def check_generic(url):
         return False, e_m
 
 
+def get_services(config_name="services"):
+    services = load_services_config(os.getenv("CONFIG_PATH", "config.yaml"), config_name)
+    service_statuses = []
+    tasks = {}
+
+    with concurrent.futures.ThreadPoolExecutor() as executor:
+
+        for service in services:
+            service_type = service.get("type")
+            service_url = service.get("url")
+            service_name = service.get("name", "Unknown Service")
+
+            if service_type == "openvpn":
+                tasks[service_name] = executor.submit(check_openvpn, service_url)
+            elif service_type == "proxy":
+                tasks[service_name] = executor.submit(check_proxy, service_url)
+            else:
+                tasks[service_name] = executor.submit(check_generic, service_url)
+
+        for service in services:
+            service_type = service.get("type")
+            service_url = service.get("url")
+            service_name = service.get("name", "Unknown Service")
+            status = tasks[service_name].result()
+
+            service_statuses.append({
+                "name": service_name,
+                "type": service_type,
+                "reason": "" if isinstance(status, bool) else status[1],
+                "url": service_url,
+                "is_up": status if isinstance(status, bool) else status[0]
+            })
+
+    print(f'[{datetime.datetime.now()}] {" ".join(["%s %r;" % (ss["name"], ss["is_up"]) for ss in service_statuses])}')
+    return service_statuses
+
+
 @app.route(app.config["BASE_PATH"], methods=["GET"])
 def index():
-    services = load_services_config(os.getenv("CONFIG_PATH", "config.yaml"))
-    service_statuses = []
+    service_statuses = get_services()
+    return render_template("index.html", services=service_statuses, admin_message=app.config["ADMIN_MESSAGE"])
 
-    for service in services:
-        service_type = service.get("type")
-        service_url = service.get("url")
-        service_name = service.get("name", "Unknown Service")
 
-        if service_type == "openvpn":
-            status = check_openvpn(service_url)
-        elif service_type == "proxy":
-            status = check_proxy(service_url)
-        else:
-            status = check_generic(service_url)
+@app.route(f'{app.config["BASE_PATH"].removesuffix("/")}/admin', methods=["GET", "POST"])
+@login_required
+def admin():
+    if request.method == "POST":
+        message = request.form.get("admin_message", "")
+        et = float(request.form.get("expiration_time", app.config["ADMIN_MESSAGE_EXPIRATION_TIME"]/3600))
+        app.config["ADMIN_MESSAGE"] = message
+        app.config["ADMIN_MESSAGE_TIME"] = time.time()
+        app.config["ADMIN_MESSAGE_EXPIRATION_TIME"] = int(et*3600) if et > 0 else app.config["ADMIN_MESSAGE_EXPIRATION_TIME"]
 
-        service_statuses.append({
-            "name": service_name,
-            "type": service_type,
-            "reason": "" if isinstance(status, bool) else status[1],
-            "url": service_url,
-            "is_up": status if isinstance(status, bool) else status[0]
-        })
-
-    return render_template("index.html", services=service_statuses)
+    service_statuses = get_services("admin-services")
+    return render_template("admin.html", services=service_statuses)
 
 
 if __name__ == "__main__":

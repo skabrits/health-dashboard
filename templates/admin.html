@@ -1,17 +1,28 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <title>Service Health Dashboard</title>
+  <meta charset="UTF-8">
+  <title>Admin Panel</title>
   <style>
     body {
       font-family: Arial, sans-serif;
-      margin: 2rem;
+      margin: 20px;
       background: #f9f9f9;
     }
-    h1 {
-      text-align: center;
-      margin-bottom: 2rem;
+    .container {
+      max-width: 800px;
+      margin: auto;
+    }
+    form {
+      margin-bottom: 20px;
+    }
+    textarea, input {
+      width: 100%;
+      padding: 10px;
+      margin-bottom: 10px;
+    }
+    button {
+      padding: 10px 20px;
     }
     .services-container {
       display: flex;
@@ -67,35 +78,39 @@
     .status-red {
       background-color: #f44336; /* red */
     }
-    .admin-notification {
-      background: #ffeb3b;
-      padding: 10px;
-      margin-bottom: 20px;
-      text-align: center;
-    }
   </style>
 </head>
 <body>
-  <h1>Service Health Dashboard</h1>
-  {% if admin_message != "" %}
-  <div class="admin-notification">{{ admin_message }}</div>
-  {% endif %}
-  <div class="services-container">
-    {% for service in services %}
-    <div class="service">
-      <div class="service-name">{{ service.name }}</div>
-      {% if service.reason != "" %}
-      <div class="service-reason">{{ service.reason }}</div>
-      {% endif %}
-      <div class="service-status">
-        {% if service.is_up %}
-        <div class="status-indicator status-green"></div> UP
-        {% else %}
-        <div class="status-indicator status-red"></div> DOWN
+  <div class="container">
+    <h1>Admin Panel</h1>
+
+    <form method="POST" action="">
+      <label for="admin_message">Admin Notification:</label><br>
+      <textarea id="admin_message" name="admin_message" rows="4" placeholder="Enter notification..."></textarea><br>
+
+      <label for="expiration_time">Expiration Time (hours):</label><br>
+      <input type="number" id="expiration_time" name="expiration_time" min="0" step="0.01" placeholder="Enter hours" value="0"><br>
+
+      <button type="submit">Set Notification</button>
+    </form>
+
+    <div class="services-container">
+      {% for service in services %}
+      <div class="service">
+        <div class="service-name">{{ service.name }}</div>
+        {% if service.reason != "" %}
+        <div class="service-reason">{{ service.reason }}</div>
         {% endif %}
+        <div class="service-status">
+          {% if service.is_up %}
+          <div class="status-indicator status-green"></div> UP
+          {% else %}
+          <div class="status-indicator status-red"></div> DOWN
+          {% endif %}
+        </div>
       </div>
+      {% endfor %}
     </div>
-    {% endfor %}
   </div>
 </body>
 </html>
