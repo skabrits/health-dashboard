@@ -5,7 +5,7 @@ metadata:
   labels:
     app: {{ include "health-dashboard.name" . }}
 spec:
-  replicas: 1
+  replicas: {{ .Values.replicaCount }}
   selector:
     matchLabels:
       app: {{ include "health-dashboard.name" . }}

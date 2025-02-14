@@ -1,4 +1,5 @@
-# Default image and tag
+replicaCount: 1
+
 image:
   repository: skabrits/health-dashboard
   tag: "0.1.0"
