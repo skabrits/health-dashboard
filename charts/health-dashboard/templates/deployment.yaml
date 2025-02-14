@@ -23,6 +23,9 @@ spec:
           env:
             - name: CONFIG_PATH
               value: "/config/config.yaml"
+          envFrom:
+            - secretRef:
+                name: {{ include "health-dashboard.fullname" . }}-secret
           volumeMounts:
             - name: flask-config
               mountPath: /config

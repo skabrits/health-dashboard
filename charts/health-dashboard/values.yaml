@@ -20,6 +20,10 @@ ingress:
           pathType: Prefix
   tls: []
 
+admin:
+  user: admin
+  password: admin
+
 configFile: |
   services:
     - name: "OpenVPN server"
