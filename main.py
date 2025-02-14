@@ -55,7 +55,7 @@ def check_proxy(url):
     """
     try:
         surl = url.split("://")
-        resp = requests.get(url, proxies={surl[0]: surl[1]}, timeout=3)
+        resp = requests.get(url, proxies={surl[0]: surl[1]}, timeout=10)
         return resp.ok or resp.status_code in [407]
     except Exception as e:
         e_m = str(e)
